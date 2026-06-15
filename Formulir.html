@@ -1,0 +1,409 @@
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <base target="_top">
+      <title>Permintaan IKA</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body { 
+          font-family: 'Inter', sans-serif; 
+          background-color: #f3f4f6; 
+          display: flex; 
+          justify-content: center; 
+          align-items: center; 
+          height: 100vh; 
+          margin: 0; 
+          color: #111827; 
+          overflow: hidden; 
+        }
+        .card { 
+          background: white; 
+          padding: 24px 40px; 
+          border-radius: 12px; 
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); 
+          max-width: 420px; 
+          width: 90%; 
+          transition: opacity 0.5s, transform 0.5s; 
+        }
+        .hidden { 
+          opacity: 0; 
+          transform: scale(0.95); 
+          pointer-events: none; 
+          position: absolute; 
+        }
+        h2 { 
+          font-size: 24px; 
+          font-weight: 700; 
+          text-align: center; 
+          color: #1f2937; 
+          margin-top: 0; 
+          margin-bottom: 24px; 
+        }
+        .form-group { 
+          margin-bottom: 20px; 
+          position: relative;
+        }
+        label { 
+          display: block; 
+          font-weight: 600; 
+          margin-bottom: 8px; 
+          color: #374151; 
+          font-size: 14px; 
+        }
+
+        /* --- PERUBAHAN DI SINI --- */
+        /* Aturan ini sekarang berlaku untuk input email DAN input teks */
+        input[type="email"], input[type="text"] { 
+          width: 100%; 
+          padding: 12px; 
+          border: 1px solid #d1d5db; 
+          border-radius: 8px; 
+          box-sizing: border-box; 
+          font-size: 16px; 
+          transition: border-color 0.2s, box-shadow 0.2s; 
+        }
+        /* Aturan :focus juga diperbarui untuk input teks */
+        input[type="email"]:focus, input[type="text"]:focus { 
+          outline: none; 
+          border-color: #0051a2; 
+          box-shadow: 0 0 0 3px rgba(0, 81, 162, 0.2); 
+        }
+        /* --- AKHIR PERUBAHAN --- */
+
+        .button-primary { 
+          margin-top: 24px; 
+          width: 100%; 
+          padding: 14px; 
+          background-color: #0051a2; 
+          color: white; 
+          border: none; 
+          border-radius: 8px; 
+          font-size: 16px; 
+          font-weight: 600; 
+          cursor: pointer; 
+          transition: background-color 0.2s; 
+          text-decoration: none; 
+          box-sizing: border-box; 
+        }
+        .button-primary:hover { 
+          background-color: #003f7f; 
+        }
+        #game-screen, #success-container { 
+          text-align: center; 
+        }
+        #game-canvas { 
+          background-color: #1f2937; 
+          border-radius: 8px; 
+        }
+        #start-game-btn { 
+          margin-top: 16px; 
+        } 
+        #game-screen p { 
+          font-size: 14px; 
+          color: #4b5563; 
+          margin-top: 12px; 
+        } 
+        .success-icon { 
+          font-size: 48px; 
+        } 
+        .success-text { 
+          font-size: 16px; 
+          color: #4b5563; 
+          margin-bottom: 24px; 
+        } 
+        #success-container .button-primary { 
+          display: block; 
+          width: 100%; 
+        } 
+        .link-secondary { 
+          display: block; 
+          margin-top: 16px; 
+          margin-left: 0; 
+          color: #4b5563; 
+          font-weight: 500; 
+          text-decoration: none; 
+        }
+        .searchable-dropdown { 
+          position: absolute; 
+          width: 100%; 
+          border: 1px solid #d1d5db; 
+          border-top: none; 
+          border-radius: 0 0 8px 8px; 
+          background-color: white; 
+          max-height: 200px; 
+          overflow-y: auto; 
+          z-index: 1000; 
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+          display: none; 
+        }
+        .dropdown-item { 
+          padding: 12px; 
+          cursor: pointer; 
+          font-size: 16px; 
+          text-align: left; 
+        }
+        .dropdown-item:hover { 
+          background-color: #f3f4f6; 
+        }
+      </style>
+
+    </head>
+    <body>
+      <!-- FORMULIR AWAL -->
+      <div id="form-container" class="card">
+        <h2>Permintaan File IKA</h2>
+        <form id="request-form">
+          <input type="hidden" name="formType" value="newRequest">
+          <!-- PERUBAHAN: DARI SELECT MENJADI INPUT YANG BISA DICARI -->
+          <div class="form-group">
+            <label for="dept-search">Departemen</label>
+            <!-- Ini adalah kotak input yang akan dilihat pengguna -->
+            <input type="text" id="dept-search" autocomplete="off" placeholder="Ketik untuk mencari..." required>
+            <!-- Ini adalah input tersembunyi yang akan menyimpan nilai pilihan (misal: "IMS") -->
+            <input type="hidden" id="dept" name="dept">
+            <!-- Ini adalah wadah untuk daftar dropdown yang akan muncul -->
+            <div id="dept-dropdown" class="searchable-dropdown">
+              <!-- Opsi akan ditambahkan oleh JavaScript -->
+            </div>
+          </div>
+          <!-- AKHIR PERUBAHAN -->
+          <div class="form-group"><label for="email">Email Anda</label><input type="email" id="email" name="email" required pattern="^[^\s@]+@wingscorp\.com$" title="Gunakan email @wingscorp.com" placeholder="contoh@wingscorp.com"></div>
+          <button type="submit" class="button-primary">Kirim Permintaan</button>
+        </form>
+              <!-- SCRIPT BARU UNTUK DROPDOWN -->
+      <script>
+        const departments = [
+          "IMS", "BOF", "PWD", "CRM", "EPU", "SOP", "ITE",
+          "SWG", "QCD", "GAF", "ENG", "RND", "PMA"
+        ];
+
+        const searchInput = document.getElementById('dept-search');
+        const dropdown = document.getElementById('dept-dropdown');
+        const hiddenInput = document.getElementById('dept');
+
+        function populateDropdown(filter = '') {
+          dropdown.innerHTML = '';
+          const filteredDepartments = departments.filter(d => d.toLowerCase().includes(filter.toLowerCase()));
+          
+          if (filteredDepartments.length === 0) {
+              dropdown.innerHTML = '<div class="dropdown-item" style="color: #9ca3af;">Tidak ditemukan</div>';
+          } else {
+              filteredDepartments.forEach(dept => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = dept;
+                item.dataset.value = dept; // Simpan nilai di atribut data
+                item.addEventListener('click', () => {
+                  searchInput.value = dept; // Tampilkan nama di kotak input
+                  hiddenInput.value = dept; // Simpan nilai di input tersembunyi
+                  dropdown.style.display = 'none';
+                });
+                dropdown.appendChild(item);
+              });
+          }
+        }
+
+        // Tampilkan dropdown saat input difokuskan
+        searchInput.addEventListener('focus', () => {
+          populateDropdown(searchInput.value);
+          dropdown.style.display = 'block';
+        });
+
+        // Lakukan filter saat pengguna mengetik
+        searchInput.addEventListener('input', () => {
+          populateDropdown(searchInput.value);
+          hiddenInput.value = ''; // Hapus nilai jika pengguna mengetik lagi
+          dropdown.style.display = 'block';
+        });
+
+        // Sembunyikan dropdown saat mengklik di luar
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.form-group')) {
+            dropdown.style.display = 'none';
+          }
+        });
+        
+        // Validasi form sebelum mengirim
+        document.getElementById('request-form').addEventListener('submit', function(e) {
+            if (!hiddenInput.value) {
+                alert('Silakan pilih departemen yang valid dari daftar.');
+                e.preventDefault(); // Hentikan pengiriman form
+            }
+        });
+      </script>
+      </div>
+
+      <!-- LAYAR GAME (TERSEMBUNYI) -->
+      <div id="game-screen" class="card hidden">
+        <h2>Permintaan Diproses...</h2>
+        <canvas id="game-canvas" width="320" height="320"></canvas>
+        <button id="start-game-btn" class="button-primary">Mulai Game</button>
+        <p id="game-instructions">Gunakan tombol panah pada keyboard Anda untuk bermain "Snake Game" sambil menunggu.</p>
+        <p id="score-display">Skor: <span id="score">0</span></p>
+      </div>
+      
+      <!-- LAYAR SUKSES (TERSEMBUNYI) -->
+      <div id="success-container" class="card hidden">
+          <div class="success-icon">✅</div>
+          <h2>Berhasil!</h2>
+          <p class="success-text">File Anda telah berhasil dibuat dan link telah dikirimkan ke email Anda.</p>
+          <a id="open-file-btn" href="#" class="button-primary" target="_blank" rel="noopener noreferrer">Buka File</a>
+          <a href="<?= SCRIPT_URL ?>" class="link-secondary" target="_blank" rel="noopener noreferrer">Buat Permintaan Lain</a>
+      </div>
+
+      <script>
+        const form = document.getElementById('request-form');
+        const formContainer = document.getElementById('form-container');
+        const gameScreen = document.getElementById('game-screen');
+        const successContainer = document.getElementById('success-container');
+        const startGameBtn = document.getElementById('start-game-btn');
+        let gameLoopId;
+        let gameStarted = false; // Penanda apakah game sudah dimulai
+
+        // --- Logika Transisi Halaman ---
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+
+          // --- PERUBAHAN DIMULAI DI SINI ---
+          const submitButton = form.querySelector('button[type="submit"]');
+          submitButton.disabled = true; // 1. Langsung nonaktifkan tombol
+          submitButton.textContent = 'Memproses...'; // 2. Ubah teksnya untuk feedback
+          // --- AKHIR PERUBAHAN ---
+
+          formContainer.classList.add('hidden');
+          gameScreen.classList.remove('hidden');
+          
+          const formData = new FormData(form);
+          const data = {};
+          formData.forEach((value, key) => { data[key] = value; });
+          
+          google.script.run
+            .withSuccessHandler(onFileCreated)
+            .withFailureHandler(err => {
+              console.error('Gagal:', err);
+              // --- TAMBAHAN: Aktifkan kembali tombol jika terjadi error ---
+              alert('Terjadi kesalahan saat mengirim permintaan. Tombol telah diaktifkan kembali, silakan coba kirim ulang.');
+              submitButton.disabled = false;
+              submitButton.textContent = 'Kirim Permintaan';
+            })
+            .handleNewRequest(data);
+       });
+
+        function onFileCreated(fileUrl) {
+          stopGame();
+          gameScreen.classList.add('hidden');
+          document.getElementById('open-file-btn').href = fileUrl;
+          successContainer.classList.remove('hidden');
+        }
+
+        // --- Logika Game Snake ---
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const gridSize = 20;
+        let snake, food, score, dx, dy, isGameOver;
+        
+        startGameBtn.addEventListener('click', function() {
+            startGameBtn.style.display = 'none';
+            startGame();
+        });
+
+        function startGame() {
+          snake = [{x: 8, y: 8}];
+          food = {};
+          score = 0;
+          // --- PERBAIKAN: Ular tidak bergerak saat game dimulai ---
+          dx = 0; dy = 0; 
+          isGameOver = false;
+          gameStarted = false; // Reset penanda game
+          scoreEl.textContent = 0;
+          generateFood();
+          clearTimeout(gameLoopId);
+          gameLoop();
+        }
+        
+        function stopGame() {
+            clearTimeout(gameLoopId);
+            isGameOver = true;
+        }
+
+        function gameLoop() {
+          if (isGameOver) {
+            ctx.fillStyle = 'rgba(31, 41, 55, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.font = '32px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+            startGameBtn.textContent = 'Mulai Lagi';
+            startGameBtn.style.display = 'block';
+            return;
+          }
+          
+          if (gameStarted) {
+            moveSnake();
+          }
+          
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          drawFood();
+          drawSnake();
+          
+          gameLoopId = setTimeout(gameLoop, 120);
+        }
+        
+        function generateFood() {
+          food.x = Math.floor(Math.random() * (canvas.width / gridSize));
+          food.y = Math.floor(Math.random() * (canvas.height / gridSize));
+        }
+
+        function drawSnake() {
+          ctx.fillStyle = '#10b981';
+          snake.forEach(part => ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2));
+        }
+        
+        function drawFood() {
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
+        }
+
+        function moveSnake() {
+          if (isGameOver) return;
+          const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+          snake.unshift(head);
+
+          if (head.x === food.x && head.y === food.y) {
+            score++;
+            scoreEl.textContent = score;
+            generateFood();
+          } else {
+            snake.pop();
+          }
+          checkCollision(head);
+        }
+        
+        function checkCollision(head) {
+            if (head.x < 0 || head.x >= (canvas.width / gridSize) || head.y < 0 || head.y >= (canvas.height / gridSize)) {
+                isGameOver = true;
+            }
+            for (let i = 4; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) isGameOver = true;
+            }
+        }
+
+        document.addEventListener('keydown', e => {
+          if (isGameOver) return;
+          const key = e.key;
+          
+          if (!gameStarted) {
+              gameStarted = true;
+          }
+
+          if (key === 'ArrowUp' && dy === 0) { dx = 0; dy = -1; }
+          else if (key === 'ArrowDown' && dy === 0) { dx = 0; dy = 1; }
+          else if (key === 'ArrowLeft' && dx === 0) { dx = -1; dy = 0; }
+          else if (key === 'ArrowRight' && dx === 0) { dx = 1; dy = 0; }
+        });
+      </script>
+    </body>
+    </html>
