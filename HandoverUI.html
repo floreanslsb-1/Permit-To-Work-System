@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 500px; position: relative; }
+        h2 { text-align: center; color: #111827; margin-bottom: 8px; }
+        p.desc { text-align: center; color: #6b7280; font-size: 14px; margin-bottom: 24px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; }
+        input { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 15px; }
+        .btn-search { background-color: #0051a2; color: white; }
+        .btn-submit { background-color: #059669; color: white; margin-top: 10px; }
+        .btn-cancel { background-color: #9ca3af; color: white; margin-top: 8px; }
+        #loader { display: none; text-align: center; margin: 15px 0; font-weight: 600; color: #0051a2; }
+        .status-box { padding: 12px; border-radius: 8px; margin-top: 20px; display: none; font-size: 14px; }
+        .success { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+        .error { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+        /* Gaya untuk Modal Custom */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .modal-box {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 85%;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-box h3 { margin-top: 0; color: #111827; }
+        .modal-box p { color: #4b5563; line-height: 1.5; margin: 15px 0; text-align: left; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="customModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="modalTitle">Konfirmasi</h3>
+            <p id="modalMessage"></p>
+            <div class="modal-buttons">
+                <button id="modalCancelBtn" class="btn-cancel" style="margin:0">Batal</button>
+                <button id="modalOkBtn" class="btn-submit" style="margin:0">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Menu Manual Handover IKA</h2>
+        <p class="desc">Ganti Pengaju Dokumen IKA (Status dokumen harus Approved/Expired)</p>
+
+        <div id="step-search">
+            <div class="form-group">
+                <label>Nomor Registrasi IKA</label>
+                <input type="text" id="regNumber" placeholder="SMU/IKA/...">
+            </div>
+            <button class="btn-search" onclick="validateDoc()">Cari & Validasi Dokumen</button>
+        </div>
+
+        <div id="step-input" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #eee;">
+            <div class="form-group">
+                <label>Alasan Pergantian PIC</label>
+                <input type="text" id="reason" placeholder="Contoh: Pengaju Resign">
+            </div>
+            <div class="form-group">
+                <label>Email PIC Pengganti</label>
+                <input type="email" id="newEmail" placeholder="nama@wingscorp.com">
+            </div>
+            <button class="btn-submit" onclick="processHandover()">Ajukan Pergantian</button>
+            <button class="btn-cancel" onclick="location.reload()">Batal</button>
+        </div>
+
+        <div id="loader">Memproses...</div>
+        <div id="response" class="status-box"></div>
+    </div>
+
+    <script>
+        let docData = null;
+        let modalCallback = null;
+
+        // Fungsi Validasi No Reg
+        function validateDoc() {
+            const reg = document.getElementById('regNumber').value;
+            if(!reg) return showCustomModal("Peringatan", "Mohon masukkan Nomor Registrasi IKA.", false);
+            
+            toggleLoader(true);
+            google.script.run
+                .withSuccessHandler(res => {
+                    toggleLoader(false);
+                    if(res.success) {
+                        docData = res.ikaData;
+                        document.getElementById('step-search').style.opacity = '0.5';
+                        document.getElementById('step-search').style.pointerEvents = 'none';
+                        document.getElementById('step-input').style.display = 'block';
+                        showResponse(`Dokumen ditemukan (PIC Saat Ini: ${res.ikaData.pengaju})`, 'success');
+                    } else {
+                        showResponse(res.message, 'error');
+                    }
+                })
+                .findIkaForHandover(reg);
+        }
+
+        // Fungsi Eksekusi Handover
+        function processHandover() {
+            const email = document.getElementById('newEmail').value.trim();
+            const reason = document.getElementById('reason').value.trim();
+
+            if(!email.endsWith('@wingscorp.com')) return showCustomModal("Peringatan", "Wajib menggunakan email @wingscorp.com", false);
+            if(!reason) return showCustomModal("Peringatan", "Alasan pergantian wajib diisi.", false);
+
+            const pesan = `Pergantian PIC IKA <b>${docData.noReg}</b> sudah sesuai?<br><br><b>DARI:</b> ${docData.pengaju}<br><b>KE:</b> ${email}`;
+
+            showCustomModal("Konfirmasi Perubahan", pesan, true, function() {
+                toggleLoader(true);
+                google.script.run
+                    .withSuccessHandler(res => {
+                        toggleLoader(false);
+                        if(res.success) {
+                            showCustomModal("Berhasil", res.message, false, function() {
+                                location.reload();
+                            });
+                        } else {
+                            showResponse(res.message, 'error');
+                        }
+                    })
+                    .executeHandoverPIC(docData, email, reason);
+            });
+        }
+
+        // Fungsi Modal Manager
+        function showCustomModal(title, message, isConfirm, callback) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').innerHTML = message;
+            const cancelBtn = document.getElementById('modalCancelBtn');
+            const okBtn = document.getElementById('modalOkBtn');
+            
+            cancelBtn.style.display = isConfirm ? 'block' : 'none';
+            okBtn.textContent = isConfirm ? 'Ya, Lanjutkan' : 'Tutup';
+            
+            document.getElementById('customModal').style.display = 'flex';
+            modalCallback = callback;
+        }
+
+        document.getElementById('modalOkBtn').onclick = function() {
+            document.getElementById('customModal').style.display = 'none';
+            if (modalCallback) modalCallback();
+        };
+
+        document.getElementById('modalCancelBtn').onclick = function() {
+            document.getElementById('customModal').style.display = 'none';
+        };
+
+        // UI Helpers
+        function toggleLoader(show) {
+            document.getElementById('loader').style.display = show ? 'block' : 'none';
+            document.getElementById('response').style.display = 'none';
+        }
+
+        function showResponse(msg, type) {
+            const resp = document.getElementById('response');
+            resp.textContent = msg;
+            resp.className = 'status-box ' + type;
+            resp.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
