@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f2937; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px;}
+        .card { background-color: white; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); padding: 32px 40px; width: 100%; max-width: 700px;}
+        h3 { font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 12px;}
+        p.subtitle { font-size: 16px; color: #6b7280; text-align: center; margin-bottom: 32px;}
+        .radio-group { border-bottom: 1px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 12px;}
+        .radio-item { display: block; position: relative; padding-left: 35px; margin-bottom: 20px; cursor: pointer; font-size: 18px; user-select: none;}
+        .radio-item input { position: absolute; opacity: 0; cursor: pointer; }
+        .checkmark { position: absolute; top: 2px; left: 0; height: 22px; width: 22px; background-color: #eee; border: 1px solid #ccc; border-radius: 50%;}
+        .radio-item:hover input ~ .checkmark { background-color: #ccc; }
+        .radio-item input:checked ~ .checkmark { background-color: #0051a2; border-color: #0051a2;}
+        .checkmark:after { content: ""; position: absolute; display: none; }
+        .radio-item input:checked ~ .checkmark:after { display: block; }
+        .radio-item .checkmark:after { top: 5px; left: 5px; width: 10px; height: 10px; border-radius: 50%; background: white;}
+        .radio-label { font-weight: 600; }
+        .radio-description { display: block; font-size: 14px; color: #6b7280; font-weight: 400; margin-top: 4px;}
+        #search-instruction { 
+            font-weight: 500; 
+            margin-top: 8px;    /* Jarak ke garis abu-abu di atasnya */
+            margin-bottom: 20px; /* Memberikan space/jarak ke kotak input di bawahnya */
+            text-align: center;
+            line-height: 1.6;   /* Jarak antar baris kalimat agar tidak rapat */
+            display: block;
+            padding: 0 10px;
+        }
+        #search-container { display:none; }
+        .input-group { display: flex; gap: 10px; }
+        input[type="text"] { flex-grow: 1; padding: 12px 16px; font-size: 16px; border: 1px solid #d1d5db; border-radius: 8px; transition: border-color 0.2s, box-shadow 0.2s;}
+        input[type="text"]:focus { outline: none; border-color: #0051a2; box-shadow: 0 0 0 3px rgba(0, 81, 162, 0.2); }
+        button { padding: 12px 20px; font-size: 16px; font-weight: 600; cursor: pointer; background-color: #0051a2; color: white; border: none; border-radius: 8px; transition: background-color 0.2s; }
+        button:hover { background-color: #003f7f; }
+        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        #approver-container { display: none; margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb;}
+        #approver-container h4 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+        .checkbox-item { display: flex; align-items: center; margin-bottom: 12px; font-size: 16px;}
+        .checkbox-item input[type="checkbox"] { width: 18px; height: 18px; margin-right: 12px; }
+        #response { margin-top: 24px; padding: 16px; border-radius: 8px; font-weight: 500; display: none;}
+        .success { background-color: #dcfce7; border: 1px solid #86efac; color: #15803d; }
+        .error { background-color: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; }
+        #loader { display: none; margin: 20px auto; border: 4px solid #f3f3f3; border-top: 4px solid #0051a2; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;}
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h3>Menu Manual</h3>
+        <p class="subtitle">Pilih tindakan yang Anda butuhkan di bawah ini.</p>
+        
+        <div class="radio-group">
+            <label class="radio-item">
+                <span class="radio-label">Kirim Ulang Email Approval</span>
+                <input type="radio" id="actionApproval" name="actionType" value="approval" onchange="showSearch()">
+                <span class="checkmark"></span>
+                <span class="radio-description">Gunakan jika membutuhkan kirim ulang email approval.</span>
+            </label>
+            <label class="radio-item">
+                <span class="radio-label">Kirim Ulang Email Penutupan</span>
+                <input type="radio" id="actionClosing" name="actionType" value="closing" onchange="showSearch()">
+                <span class="checkmark"></span>
+                <span class="radio-description">Gunakan jika membutuhkan kirim ulang email penutupan.</span>
+            </label>
+        </div>
+
+        <div id="search-container" style="display:none;">
+            <p id="search-instruction" style="font-weight: 500; margin-bottom: 12px; text-align: center;"></p>
+            <div class="input-group">
+                <input type="text" id="regNumberInput" placeholder="Masukkan No. Registrasi IKA...">
+                <button id="findBtn" onclick="startProcess()">Cari Dokumen</button>
+            </div>
+        </div>
+        
+        <div id="loader"></div>
+        
+        <div id="approver-container">
+            <h4 id="approver-title">Pilih approver untuk dikirimi email ulang:</h4>
+            <div id="approver-list"></div>
+            <button id="resendBtn" onclick="confirmAndResend()" style="width: 100%; margin-top: 16px;">Kirim Ulang Email Approval</button>
+        </div>
+
+        <div id="closing-confirm-container" style="display: none; margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+          <p id="closing-confirm-message" style="font-size: 16px; margin-bottom: 16px; line-height: 1.5;"></p>
+          <button id="sendClosingBtn" onclick="handleKirimClosing()" style="width: 100%;">Ya, Kirim Ulang Email Penutupan</button>
+        </div>
+
+        <div id="response"></div>
+    </div>
+
+    <script>
+        // --- Variabel Global ---
+        let currentIkaData = null;
+
+        // --- Elemen-elemen Penting ---
+        const getEl = (id) => document.getElementById(id);
+        const findBtn = getEl('findBtn');
+        const resendBtn = getEl('resendBtn');
+        const sendClosingBtn = getEl('sendClosingBtn');
+        const loader = getEl('loader');
+        const responseDiv = getEl('response');
+        const regInput = getEl('regNumberInput');
+        const approverContainer = getEl('approver-container');
+        const closingConfirmContainer = getEl('closing-confirm-container');
+
+        // --- Fungsi Pengelola UI ---
+
+        /** Mereset seluruh UI ke status awal */
+        function resetUI() {
+            approverContainer.style.display = 'none';
+            closingConfirmContainer.style.display = 'none';
+            responseDiv.style.display = 'none';
+            loader.style.display = 'none';
+
+            // Reset tombol
+            findBtn.disabled = false;
+            resendBtn.disabled = false;
+            resendBtn.textContent = 'Kirim Ulang Email Approval';
+            sendClosingBtn.disabled = false;
+            sendClosingBtn.textContent = 'Ya, Kirim Ulang Email Penutupan';
+
+            currentIkaData = null;
+        }
+
+        /** Menampilkan blok pencarian saat radio dipilih */
+        function showSearch() {
+            const selectedAction = document.querySelector('input[name="actionType"]:checked').value;
+            const searchContainer = getEl('search-container');
+            const instruction = getEl('search-instruction');
+            
+            // Variabel guideText ini mengandung <br><br> untuk memberikan jarak
+            const guideText = '<br><span style="font-size: 15px; color: #6b7280; font-weight: 400;">Format: SMU/IKA/IMS/2025.09/001</span><br>';
+            
+            if (selectedAction === 'approval') {
+                // WAJIB pakai .innerHTML agar tag <br> terbaca sebagai spasi/baris baru
+                instruction.innerHTML = 'Masukkan No. Registrasi untuk melihat daftar approver yang tertunda.' + guideText;
+            } else if (selectedAction === 'closing') {
+                instruction.innerHTML = 'Masukkan No. Registrasi untuk mencari IKA yang akan ditutup.' + guideText;
+            }
+            
+            searchContainer.style.display = 'block';
+            resetUI(); 
+            regInput.value = ''; 
+        }
+
+        /** Menampilkan pesan respon (sukses/error) */
+        function showResponse(message, type) {
+            responseDiv.textContent = message;
+            responseDiv.className = type; // 'success' or 'error'
+            responseDiv.style.display = 'block';
+        }
+
+        /** Handler error umum untuk semua panggilan server */
+        function onFailure(error) {
+            resetUI(); // Bersihkan UI jika terjadi error
+            showResponse(`Error: ${error.message}`, 'error');
+        }
+
+        // --- Fungsi Logika Utama ---
+
+        /** Pintu masuk utama saat tombol "Cari Dokumen" diklik */
+        function startProcess() {
+            const selectedAction = document.querySelector('input[name="actionType"]:checked').value;
+            resetUI(); // Bersihkan respon lama
+            
+            // Nonaktifkan tombol cari & tampilkan loader
+            findBtn.disabled = true;
+            loader.style.display = 'block';
+
+            if (selectedAction === 'approval') {
+                google.script.run
+                    .withSuccessHandler(onFindApproversSuccess)
+                    .withFailureHandler(onFailure)
+                    .findPendingApprovers(regInput.value);
+            } else if (selectedAction === 'closing') {
+                google.script.run
+                    .withSuccessHandler(onCariClosingSuccess)
+                    .withFailureHandler(onFailure)
+                    .findIkaForClosing(regInput.value); // Panggil fungsi BARU (Cari)
+            }
+        }
+
+        // --- ALUR 1: KIRIM ULANG APPROVAL ---
+
+        /** Sukses: Menemukan approver yang pending */
+        function onFindApproversSuccess(response) {
+            findBtn.disabled = false;
+            loader.style.display = 'none';
+            
+            if (response.success) {
+                currentIkaData = response.ikaData; // Simpan data IKA
+                const listDiv = getEl('approver-list');
+                listDiv.innerHTML = ''; // Kosongkan list lama
+                
+                // Buat checkbox untuk setiap approver
+                response.pendingApprovers.forEach(email => {
+                    const item = document.createElement('div');
+                    item.className = 'checkbox-item';
+                    item.innerHTML = `<input type="checkbox" id="${email}" value="${email}" name="approver" checked><label for="${email}">${email}</label>`;
+                    listDiv.appendChild(item);
+                });
+                approverContainer.style.display = 'block'; // Tampilkan kontainer checkbox
+            } else {
+                showResponse(response.message, 'error');
+            }
+        }
+
+        /** Tombol "Kirim Ulang Email Approval" diklik */
+        function confirmAndResend() {
+            const checkboxes = document.querySelectorAll('input[name="approver"]:checked');
+            const selectedEmails = Array.from(checkboxes).map(cb => cb.value);
+
+            if (selectedEmails.length === 0) {
+                alert('Harap pilih minimal satu approver.');
+                return;
+            }
+
+            let confirmMessage = 'Anda akan mengirim ulang email approval ke:\n\n';
+            selectedEmails.forEach(email => { confirmMessage += '- ' + email + '\n'; });
+            confirmMessage += '\nApakah Anda yakin?';
+
+            if (confirm(confirmMessage)) {
+                resendBtn.disabled = true;
+                resendBtn.textContent = 'Mengirim...';
+                loader.style.display = 'block'; // Tampilkan loader
+
+                google.script.run
+                    .withSuccessHandler(onResendApprovalSuccess)
+                    .withFailureHandler(onFailure)
+                    .resendToSelectedApprovers(currentIkaData, selectedEmails);
+            }
+        }
+
+        /** Sukses: Mengirim ulang email approval */
+        function onResendApprovalSuccess(message) {
+            resetUI();
+            showResponse(message, 'success');
+            regInput.value = ''; // Bersihkan input
+        }
+
+
+        // --- ALUR 2: KIRIM ULANG CLOSING (YANG BARU) ---
+
+        /** [BARU] Sukses: Menemukan IKA untuk di-closing */
+        function onCariClosingSuccess(result) {
+            loader.style.display = 'none';
+            getEl('findBtn').disabled = false;
+
+            if (result.success) {
+                currentIkaData = result.ikaData;
+        
+                const confirmMsg = getEl('closing-confirm-message');
+        
+                // Menampilkan Role dan Email Asli hasil ekstraksi
+                confirmMsg.innerHTML = `
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border-left: 4px solid #0051a2;">
+                        <b>Detail Dokumen:</b> ${result.ikaData.noReg}<br>
+                        <b>Status:</b> ${result.ikaData.status}<br><br>
+                        <b>Akan dikirim ke (${result.ikaData.rolePenerima}):</b><br>
+                       <span style="color: #0051a2; font-weight: bold;">${result.ikaData.emailTujuan}</span>
+                    </div>
+                      <p style="margin-top: 15px;">Apakah Anda yakin ingin mengirim ulang?</p>
+                `;
+        
+                getEl('closing-confirm-container').style.display = 'block';
+            } else {
+                showResponse(result.message, 'error');
+            }
+        }
+
+        /** [BARU] Tombol "Ya, Kirim Ulang Email Penutupan" diklik */
+        function handleKirimClosing() {
+            if (!currentIkaData) {
+                alert('Data IKA tidak ditemukan. Silakan cari ulang.');
+                return;
+            }
+
+            sendClosingBtn.disabled = true;
+            sendClosingBtn.textContent = 'Mengirim...';
+            loader.style.display = 'block';
+
+            google.script.run
+                .withSuccessHandler(onKirimClosingSuccess)
+                .withFailureHandler(onFailure)
+                .sendClosingEmail(currentIkaData); // Panggil fungsi BARU (Kirim)
+        }
+
+        /** [BARU] Sukses: Mengirim email closing */
+        function onKirimClosingSuccess(result) {
+            resetUI();
+            showResponse(result.message, result.success ? 'success' : 'error');
+            regInput.value = ''; // Bersihkan input
+        }
+
+    </script>
+</body>
+</html>
